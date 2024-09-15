@@ -1359,6 +1359,13 @@ class SMPL_Robot:
                 else:
                     joint_range = update_joint_limits(joint_range)
 
+            ### PHJ HACK: remove smpl root offset, make pevlis at origin  ##### 
+            root_offset = joints[0]
+            joints -= root_offset
+            verts -= root_offset
+            joint_offsets["Pelvis"][:] = 0.
+            ###################################################################
+
             self.height = np.max(verts[:, 1]) - np.min(verts[:, 1])
 
             if (len(self.get_params(get_name=True)) > 1
@@ -1381,6 +1388,11 @@ class SMPL_Robot:
                 scale_dict=size_dict,
                 geom_dir=f"{self.model_dirs[-1]}/geom",
             )
+
+            ### PHJ HACK #####
+            joint_offsets["Pelvis"][:] = 0.
+            ##################
+
             self.skeleton.load_from_offsets(
                 joint_offsets,
                 joint_parents,
@@ -1423,6 +1435,13 @@ class SMPL_Robot:
             
             verts, joints, skin_weights, joint_names, joint_offsets, parents_dict, channels, joint_range = smpl_parser.get_offsets(v_template = v_template,
                 betas=self.beta, zero_pose=zero_pose)
+
+            ### PHJ HACK: remove smpl root offset, make pevlis at origin  ##### 
+            root_offset = joints[0]
+            joints -= root_offset
+            verts -= root_offset
+            joint_offsets["Pelvis"][:] = 0.
+            ###################################################################
 
             self.height = torch.max(verts[:, 1]) - torch.min(verts[:, 1])
             self.hull_dict = get_geom_dict(verts,
