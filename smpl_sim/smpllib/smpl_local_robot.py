@@ -1360,10 +1360,10 @@ class SMPL_Robot:
                     joint_range = update_joint_limits(joint_range)
 
             ### PHJ HACK: remove smpl root offset, make pevlis at origin  ##### 
-            root_offset = joints[0]
-            joints -= root_offset
-            verts -= root_offset
-            joint_offsets["Pelvis"][:] = 0.
+            # root_offset = joints[0]
+            # joints -= root_offset
+            # verts -= root_offset
+            # joint_offsets["Pelvis"][:] = 0.
             ###################################################################
 
             self.height = np.max(verts[:, 1]) - np.min(verts[:, 1])
@@ -1437,10 +1437,10 @@ class SMPL_Robot:
                 betas=self.beta, zero_pose=zero_pose)
 
             ### PHJ HACK: remove smpl root offset, make pevlis at origin  ##### 
-            root_offset = joints[0]
-            joints -= root_offset
-            verts -= root_offset
-            joint_offsets["Pelvis"][:] = 0.
+            # root_offset = joints[0]
+            # joints -= root_offset
+            # verts -= root_offset
+            # joint_offsets["Pelvis"][:] = 0.
             ###################################################################
 
             self.height = torch.max(verts[:, 1]) - torch.min(verts[:, 1])
