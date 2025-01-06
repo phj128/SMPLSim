@@ -12,6 +12,7 @@ import re
 import numpy as np
 import joblib
 from scipy.spatial.transform import Rotation as sRot
+
 try:
     # Python < 3.9
     from importlib_resources import files
@@ -19,63 +20,62 @@ except ImportError:
     from importlib.resources import files
 
 GEOM_TYPES = {
-    'Pelvis': 'sphere',
-    'L_Hip': 'capsule',
-    'L_Knee': 'capsule',
-    'L_Ankle': 'box',
-    'L_Toe': 'box',
-    'R_Hip': 'capsule',
-    'R_Knee': 'capsule',
-    'R_Ankle': 'box',
-    'R_Toe': 'box',
-    'Torso': 'capsule',
-    'Spine': 'capsule',
-    'Chest': 'capsule',
-    'Neck': 'capsule',
-    'Head': 'sphere',
-    'L_Thorax': 'capsule',
-    'L_Shoulder': 'capsule',
-    'L_Elbow': 'capsule',
-    'L_Wrist': 'capsule',
-    'L_Hand': 'sphere',
+    "Pelvis": "sphere",
+    "L_Hip": "capsule",
+    "L_Knee": "capsule",
+    "L_Ankle": "box",
+    "L_Toe": "box",
+    "R_Hip": "capsule",
+    "R_Knee": "capsule",
+    "R_Ankle": "box",
+    "R_Toe": "box",
+    "Torso": "capsule",
+    "Spine": "capsule",
+    "Chest": "capsule",
+    "Neck": "capsule",
+    "Head": "sphere",
+    "L_Thorax": "capsule",
+    "L_Shoulder": "capsule",
+    "L_Elbow": "capsule",
+    "L_Wrist": "capsule",
+    "L_Hand": "sphere",
     # 'L_Hand': 'box',
-    'R_Thorax': 'capsule',
-    'R_Shoulder': 'capsule',
-    'R_Elbow': 'capsule',
-    'R_Wrist': 'capsule',
-    'R_Hand': 'sphere',
+    "R_Thorax": "capsule",
+    "R_Shoulder": "capsule",
+    "R_Elbow": "capsule",
+    "R_Wrist": "capsule",
+    "R_Hand": "sphere",
     # 'R_Hand': 'box',
-    
-    "L_Index1": 'capsule',
-    "L_Index2": 'capsule',
-    "L_Index3": 'capsule',
-    "L_Middle1": 'capsule',
-    "L_Middle2": 'capsule',
-    "L_Middle3": 'capsule',
-    "L_Pinky1": 'capsule',
-    "L_Pinky2": 'capsule',
-    "L_Pinky3": 'capsule',
-    "L_Ring1": 'capsule',
-    "L_Ring2": 'capsule',
-    "L_Ring3": 'capsule',
-    "L_Thumb1": 'capsule',
-    "L_Thumb2": 'capsule',
-    "L_Thumb3": 'capsule',
-    "R_Index1": 'capsule',
-    "R_Index2": 'capsule',
-    "R_Index3": 'capsule',
-    "R_Middle1": 'capsule',
-    "R_Middle2": 'capsule',
-    "R_Middle3": 'capsule',
-    "R_Pinky1": 'capsule',
-    "R_Pinky2": 'capsule',
-    "R_Pinky3": 'capsule',
-    "R_Ring1": 'capsule',
-    "R_Ring2": 'capsule',
-    "R_Ring3": 'capsule',
-    "R_Thumb1": 'capsule',
-    "R_Thumb2": 'capsule',
-    "R_Thumb3": 'capsule',
+    "L_Index1": "capsule",
+    "L_Index2": "capsule",
+    "L_Index3": "capsule",
+    "L_Middle1": "capsule",
+    "L_Middle2": "capsule",
+    "L_Middle3": "capsule",
+    "L_Pinky1": "capsule",
+    "L_Pinky2": "capsule",
+    "L_Pinky3": "capsule",
+    "L_Ring1": "capsule",
+    "L_Ring2": "capsule",
+    "L_Ring3": "capsule",
+    "L_Thumb1": "capsule",
+    "L_Thumb2": "capsule",
+    "L_Thumb3": "capsule",
+    "R_Index1": "capsule",
+    "R_Index2": "capsule",
+    "R_Index3": "capsule",
+    "R_Middle1": "capsule",
+    "R_Middle2": "capsule",
+    "R_Middle3": "capsule",
+    "R_Pinky1": "capsule",
+    "R_Pinky2": "capsule",
+    "R_Pinky3": "capsule",
+    "R_Ring1": "capsule",
+    "R_Ring2": "capsule",
+    "R_Ring3": "capsule",
+    "R_Thumb1": "capsule",
+    "R_Thumb2": "capsule",
+    "R_Thumb3": "capsule",
 }
 # KP KD gear max_torque
 # GAINS = {
@@ -129,7 +129,6 @@ GAINS_PHC = {
     "R_Elbow": [500, 50, 1, 150],
     "R_Wrist": [300, 30, 1, 150],
     "R_Hand": [300, 30, 1, 150],
-    
     "L_Index1": [100, 10, 1, 150],
     "L_Index2": [100, 10, 1, 150],
     "L_Index3": [100, 10, 1, 150],
@@ -190,30 +189,29 @@ GAINS_PHC = {
 # }
 
 GAINS_MJ = {
-    "L_Hip":            [250, 2.5, 1, 500, 10, 2],
-    "L_Knee":           [250, 2.5, 1, 500, 10, 2],
-    "L_Ankle":          [150, 2.5, 1, 500, 10, 2],
-    "L_Toe":            [150, 1, 1, 500, 1, 1],
-    "R_Hip":            [250, 2.5, 1, 500, 10, 2],
-    "R_Knee":           [250, 2.5, 1, 500, 10, 2],
-    "R_Ankle":          [150, 1, 1, 500, 10, 2],
-    "R_Toe":            [150, 1, 1, 500, 1, 1],
-    "Torso":            [500, 5, 1, 500, 10, 2],
-    "Spine":            [500, 5, 1, 500, 10, 2],
-    "Chest":            [500, 5, 1, 500, 10, 2],
-    "Neck":             [150, 1, 1, 250, 50, 4],
-    "Head":             [150, 1, 1, 250, 50, 4],
-    "L_Thorax":         [200, 2, 1, 500, 50, 4],
-    "L_Shoulder":       [200, 2, 1, 500, 50, 4],
-    "L_Elbow":          [150, 1, 1, 150, 10, 2],
-    "L_Wrist":          [100, 1, 1, 150, 1, 1],
-    "L_Hand":           [50, 1, 1, 150, 1, 1],
-    "R_Thorax":         [200, 2, 1, 150, 10, 2],
-    "R_Shoulder":       [200, 2, 1, 250, 10, 2],
-    "R_Elbow":          [150, 1, 1, 150, 10, 2],
-    "R_Wrist":          [100, 1, 1, 150, 1, 1],
-    "R_Hand":           [50, 1, 1, 150, 1, 1],
-    
+    "L_Hip": [250, 2.5, 1, 500, 10, 2],
+    "L_Knee": [250, 2.5, 1, 500, 10, 2],
+    "L_Ankle": [150, 2.5, 1, 500, 10, 2],
+    "L_Toe": [150, 1, 1, 500, 1, 1],
+    "R_Hip": [250, 2.5, 1, 500, 10, 2],
+    "R_Knee": [250, 2.5, 1, 500, 10, 2],
+    "R_Ankle": [150, 1, 1, 500, 10, 2],
+    "R_Toe": [150, 1, 1, 500, 1, 1],
+    "Torso": [500, 5, 1, 500, 10, 2],
+    "Spine": [500, 5, 1, 500, 10, 2],
+    "Chest": [500, 5, 1, 500, 10, 2],
+    "Neck": [150, 1, 1, 250, 50, 4],
+    "Head": [150, 1, 1, 250, 50, 4],
+    "L_Thorax": [200, 2, 1, 500, 50, 4],
+    "L_Shoulder": [200, 2, 1, 500, 50, 4],
+    "L_Elbow": [150, 1, 1, 150, 10, 2],
+    "L_Wrist": [100, 1, 1, 150, 1, 1],
+    "L_Hand": [50, 1, 1, 150, 1, 1],
+    "R_Thorax": [200, 2, 1, 150, 10, 2],
+    "R_Shoulder": [200, 2, 1, 250, 10, 2],
+    "R_Elbow": [150, 1, 1, 150, 10, 2],
+    "R_Wrist": [100, 1, 1, 150, 1, 1],
+    "R_Hand": [50, 1, 1, 150, 1, 1],
     "L_Index1": [100, 10, 1, 150],
     "L_Index2": [100, 10, 1, 150],
     "L_Index3": [100, 10, 1, 150],
@@ -274,7 +272,7 @@ class Bone:
 
 class Skeleton:
 
-    def __init__(self, smpl_model = "smpl"):
+    def __init__(self, smpl_model="smpl"):
         self.bones = []
         self.name2bone = {}
         self.mass_scale = 1.0
@@ -301,16 +299,16 @@ class Skeleton:
         spec_channels=None,
         upright_start=False,
         remove_toe=False,
-        freeze_hand= False,
+        freeze_hand=False,
         real_weight_porpotion_capsules=False,
-        real_weight_porpotion_boxes = False, 
+        real_weight_porpotion_boxes=False,
         real_weight=False,
         big_ankle=False,
-        box_body = False, 
-        sim='mujoco', 
-        ball_joints = False, 
-        create_vel_sensors = False, 
-        exclude_contacts = []
+        box_body=False,
+        sim="mujoco",
+        ball_joints=False,
+        create_vel_sensors=False,
+        exclude_contacts=[],
     ):
         if channels is None:
             channels = ["x", "y", "z"]
@@ -346,7 +344,7 @@ class Skeleton:
             bone.id = i + 1
             bone.name = joint
 
-            bone.channels = (spec_channels[joint] if joint in spec_channels.keys() else channels)
+            bone.channels = spec_channels[joint] if joint in spec_channels.keys() else channels
             bone.dof_index = [dof_ind[x] for x in bone.channels]
             bone.offset = np.array(offsets[joint]) * self.len_scale
             bone.lb = np.rad2deg(jrange[joint][:, 0])
@@ -367,17 +365,27 @@ class Skeleton:
                 bone.end = bone.pos.copy() + 0.002
             else:
                 bone.end = sum([bone_c.pos for bone_c in bone.child]) / len(bone.child)
-                
-    def construct_tree(self,
-            template_fname=files('smpl_sim').joinpath('data/assets/mjcf/humanoid_template_local.xml'),
-            offset=np.array([0, 0, 0]),
-            ref_angles=None,
-            bump_buffer=False):
-        
+
+    def construct_tree(
+        self,
+        template_fname=files("smpl_sim").joinpath("data/assets/mjcf/humanoid_template_local.xml"),
+        offset=np.array([0, 0, 0]),
+        ref_angles=None,
+        bump_buffer=False,
+    ):
+
         if ref_angles is None:
             ref_angles = {}
         parser = XMLParser(remove_blank_text=True)
         tree = parse(template_fname, parser=parser)
+
+        # add crtl limit
+        if self.sim in ["mujoco"]:
+            default = tree.getroot().find("default")
+            motor_default = SubElement(default, "motor")
+            motor_default.set("ctrllimited", "true")
+            motor_default.set("ctrlrange", "-1 1")
+
         worldbody = tree.getroot().find("worldbody")
         self.size_buffer = {}
         self.write_xml_bodynode(self.root, worldbody, offset, ref_angles)
@@ -407,51 +415,52 @@ class Skeleton:
                 elif self.sim in ["isaacgym"]:
                     attr["gear"] = "500"
                 SubElement(actuators, "motor", attr)
-            
-            
+
         if bump_buffer:
             SubElement(tree.getroot(), "size", {"njmax": "700", "nconmax": "700"})
-            
+
         c_node = tree.getroot().find("contact")
         for bname1, bname2 in self.exclude_contacts:
             attr = {"body1": bname1, "body2": bname2}
             SubElement(c_node, "exclude", attr)
-            
+
         s_node = tree.getroot().find("sensor")
         if self.create_vel_sensors:
             self.add_vel_sensors(self.root, s_node, "framelinvel")
             self.add_vel_sensors(self.root, s_node, "frameangvel")
-            
+
         return tree
-    
-    def add_vel_sensors(self, bone, sensor_node, sensor_type = "framelinvel"):
-        SubElement(sensor_node, sensor_type, {"name": "sensor_" + bone.name + f"_{sensor_type}", "objtype": 'xbody', "objname": bone.name})
+
+    def add_vel_sensors(self, bone, sensor_node, sensor_type="framelinvel"):
+        SubElement(
+            sensor_node,
+            sensor_type,
+            {"name": "sensor_" + bone.name + f"_{sensor_type}", "objtype": "xbody", "objname": bone.name},
+        )
         if bone.child is None:
             pass
         else:
             for bone_c in bone.child:
                 self.add_vel_sensors(bone_c, sensor_node, sensor_type)
-        
-        
 
     def write_xml(
-            self,
-            fname,
-            template_fname=files('smpl_sim').joinpath('data/assets/mjcf/humanoid_template_local.xml'),
-            offset=np.array([0, 0, 0]),
-            ref_angles=None,
-            bump_buffer=False,
+        self,
+        fname,
+        template_fname=files("smpl_sim").joinpath("data/assets/mjcf/humanoid_template_local.xml"),
+        offset=np.array([0, 0, 0]),
+        ref_angles=None,
+        bump_buffer=False,
     ):
         tree = self.construct_tree(template_fname, offset, ref_angles, bump_buffer)
-        
+
         tree.write(fname, pretty_print=True)
 
     def write_str(
-            self,
-            template_fname=files('smpl_sim').joinpath('data/assets/mjcf/humanoid_template_local.xml'),
-            offset=np.array([0, 0, 0]),
-            ref_angles=None,
-            bump_buffer=False,
+        self,
+        template_fname=files("smpl_sim").joinpath("data/assets/mjcf/humanoid_template_local.xml"),
+        offset=np.array([0, 0, 0]),
+        ref_angles=None,
+        bump_buffer=False,
     ):
         tree = self.construct_tree(template_fname, offset, ref_angles, bump_buffer)
 
@@ -464,7 +473,7 @@ class Skeleton:
         node = SubElement(parent_node, "body", attr)
 
         # SubElement(node, "site", {"name": bone.name, "size": "0.01"}) # Writing site
-        
+
         # write joints
         if bone.parent is None:
             j_attr = dict()
@@ -473,16 +482,16 @@ class Skeleton:
         else:
             if self.ball_joints:
                 j_attr = dict()
-                j_attr["name"] = bone.name 
+                j_attr["name"] = bone.name
                 j_attr["type"] = "ball"
                 j_attr["pos"] = "{0:.4f} {1:.4f} {2:.4f}".format(*(bone.pos + offset))
-                j_attr["user"] = " ".join([ str(s) for s in GAINS_MJ[bone.name]]) # using user to set the max torque
-                
+                j_attr["user"] = " ".join([str(s) for s in GAINS_MJ[bone.name]])  # using user to set the max torque
+
                 if j_attr["name"] in ref_angles.keys():
                     j_attr["ref"] = f"{ref_angles[j_attr['name']]:.1f}"
                 SubElement(node, "joint", j_attr)
             else:
-                
+
                 for i in range(len(bone.dof_index)):
                     ind = bone.dof_index[i]
                     axis = bone.orient[:, ind]
@@ -491,15 +500,16 @@ class Skeleton:
                     j_attr["type"] = "hinge"
                     j_attr["pos"] = "{0:.4f} {1:.4f} {2:.4f}".format(*(bone.pos + offset))
                     j_attr["axis"] = "{0:.4f} {1:.4f} {2:.4f}".format(*axis)
-                    
+
                     if self.sim in ["mujoco"]:
-                        j_attr["user"] = " ".join([ str(s) for s in GAINS_MJ[bone.name]]) # using user to set the max torque
+                        j_attr["user"] = " ".join(
+                            [str(s) for s in GAINS_MJ[bone.name]]
+                        )  # using user to set the max torque
                         j_attr["armature"] = "0.01"
                     elif self.sim in ["isaacgym"]:
                         j_attr["stiffness"] = str(GAINS_PHC[bone.name][0])
                         j_attr["damping"] = str(GAINS_PHC[bone.name][1])
                         j_attr["armature"] = "0.02"
-                        
 
                     if i < len(bone.lb):
                         j_attr["range"] = "{0:.4f} {1:.4f}".format(bone.lb[i], bone.ub[i])
@@ -509,30 +519,28 @@ class Skeleton:
                         j_attr["ref"] = f"{ref_angles[j_attr['name']]:.1f}"
 
                     SubElement(node, "joint", j_attr)
-                
-                
 
         # write geometry
         g_attr = dict()
-        
+
         if not self.freeze_hand:
-            GEOM_TYPES['L_Hand'] = 'box'
-            GEOM_TYPES['R_Hand'] = 'box'
-        
+            GEOM_TYPES["L_Hand"] = "box"
+            GEOM_TYPES["R_Hand"] = "box"
+
         if self.box_body:
-            GEOM_TYPES['Head'] = 'box'
-            GEOM_TYPES['Pelvis'] = 'box'
-            
+            GEOM_TYPES["Head"] = "box"
+            GEOM_TYPES["Pelvis"] = "box"
+
         if self.smpl_model == "smplx":
-            GEOM_TYPES['L_Wrist'] = 'box' 
-            GEOM_TYPES['R_Wrist'] = 'box'
-        
+            GEOM_TYPES["L_Wrist"] = "box"
+            GEOM_TYPES["R_Wrist"] = "box"
+
         g_attr["type"] = GEOM_TYPES[bone.name]
         g_attr["contype"] = "1"
         g_attr["conaffinity"] = "1"
         if self.real_weight:
             base_density = 1000
-        else: 
+        else:
             base_density = 500
         g_attr["density"] = str(base_density)
         e1 = np.zeros(3)
@@ -556,12 +564,16 @@ class Skeleton:
             # radius = 0.067
             # V = np.pi * radius ** 2 * ((4/3) * radius + side_len)
 
-            roots = np.polynomial.polynomial.Polynomial([-hull_params['volume'], 0, side_len * np.pi, 4 / 3 * np.pi]).roots()
+            roots = np.polynomial.polynomial.Polynomial(
+                [-hull_params["volume"], 0, side_len * np.pi, 4 / 3 * np.pi]
+            ).roots()
             real_valued = roots.real[abs(roots.imag) < 1e-5]
             real_valued = real_valued[real_valued > 0]
             if bone.name in ["Torso", "Spine", "L_Hip", "R_Hip"]:
                 real_valued *= 0.7  # ZL Hack: shrinkage
-                if self.real_weight_porpotion_capsules:  # If shift is enabled, shift the weight based on teh shrinkage factor
+                if (
+                    self.real_weight_porpotion_capsules
+                ):  # If shift is enabled, shift the weight based on teh shrinkage factor
                     g_attr["density"] = str((1 / 0.7**2) * base_density)
 
             if bone.name in ["Chest"]:
@@ -569,7 +581,7 @@ class Skeleton:
                 if self.real_weight_porpotion_capsules:
                     g_attr["density"] = str((1 / 0.7**2) * base_density)
 
-            if bone.name in ["L_Knee", 'R_Knee']:
+            if bone.name in ["L_Knee", "R_Knee"]:
                 real_valued *= 0.9  # ZL Hack: shrinkage
                 if self.real_weight_porpotion_capsules:
                     g_attr["density"] = str((1 / 0.9**2) * base_density)
@@ -582,23 +594,27 @@ class Skeleton:
 
         elif g_attr["type"] == "box":
             pos = (e1 + e2) / 2
-            min_verts = hull_params['norm_verts'].min(axis=0).values
-            size = (hull_params['norm_verts'].max(axis=0).values - min_verts).numpy()
+            min_verts = hull_params["norm_verts"].min(axis=0).values
+            size = (hull_params["norm_verts"].max(axis=0).values - min_verts).numpy()
             if self.upright_start:
                 if bone.name == "L_Toe" or bone.name == "R_Toe":
-                    size[0] = hull_params['volume'] / (size[2] * size[0])
+                    size[0] = hull_params["volume"] / (size[2] * size[0])
                 else:
-                    size[2] = hull_params['volume'] / (size[1] * size[0])
+                    size[2] = hull_params["volume"] / (size[1] * size[0])
             else:
-                size[1] = hull_params['volume'] / (size[2] * size[0])
+                size[1] = hull_params["volume"] / (size[2] * size[0])
             size /= 2
 
             if bone.name == "L_Toe" or bone.name == "R_Toe":
                 if self.upright_start:
-                    pos[2] = -bone.pos[2] / 2 - self.size_buffer[bone.parent.name][2] + size[2]  # To get toe to be at the same height as the parent
+                    pos[2] = (
+                        -bone.pos[2] / 2 - self.size_buffer[bone.parent.name][2] + size[2]
+                    )  # To get toe to be at the same height as the parent
                     pos[1] = -bone.pos[1] / 2  # To get toe to be at the same x as the parent
                 else:
-                    pos[1] = -bone.pos[1] / 2 - self.size_buffer[bone.parent.name][1] + size[1]  # To get toe to be at the same height as the parent
+                    pos[1] = (
+                        -bone.pos[1] / 2 - self.size_buffer[bone.parent.name][1] + size[1]
+                    )  # To get toe to be at the same height as the parent
                     pos[0] = -bone.pos[0] / 2  # To get toe to be at the same x as the parent
 
                 if self.remove_toe:
@@ -615,7 +631,10 @@ class Skeleton:
                 # Big ankle override
                 g_attr = {}
                 hull_params = self.hull_dict[bone.name]
-                min_verts, max_verts = hull_params['norm_verts'].min(axis=0).values, hull_params['norm_verts'].max(axis=0).values
+                min_verts, max_verts = (
+                    hull_params["norm_verts"].min(axis=0).values,
+                    hull_params["norm_verts"].max(axis=0).values,
+                )
                 size = max_verts - min_verts
 
                 bone_end = bone.end
@@ -623,22 +642,29 @@ class Skeleton:
                 size /= 2
 
                 if bone.name == "L_Toe" or bone.name == "R_Toe":
-                    parent_min, parent_max = self.hull_dict[bone.parent.name]['norm_verts'].min(axis=0).values, self.hull_dict[bone.parent.name]['norm_verts'].max(axis=0).values
+                    parent_min, parent_max = (
+                        self.hull_dict[bone.parent.name]["norm_verts"].min(axis=0).values,
+                        self.hull_dict[bone.parent.name]["norm_verts"].max(axis=0).values,
+                    )
                     parent_pos = (parent_max + parent_min) / 2
                     if self.upright_start:
-                        pos[2] = parent_min[2] - bone.pos[2] + size[2]  # To get toe to be at the same height as the parent
+                        pos[2] = (
+                            parent_min[2] - bone.pos[2] + size[2]
+                        )  # To get toe to be at the same height as the parent
                         pos[1] = parent_pos[1] - bone.pos[1]  # To get toe to be at the y as the parent
                     else:
-                        pos[1] = parent_min[1] - bone.pos[1] + size[1]  # To get toe to be at the same height as the parent
+                        pos[1] = (
+                            parent_min[1] - bone.pos[1] + size[1]
+                        )  # To get toe to be at the same height as the parent
                         pos[0] = parent_pos[0] - bone.pos[0]  # To get toe to be at the y as the parent
-                        
+
                 rot = np.array([1, 0, 0, 0])
-                
+
                 g_attr["type"] = "box"
 
             if bone.name == "Pelvis":
                 size /= 1.75  # ZL Hack: shrinkage
-                
+
             if bone.name == "Head":
                 if self.upright_start:
                     size[0] /= 1.5  # ZL Hack: shrinkage
@@ -655,11 +681,12 @@ class Skeleton:
                     size[0] /= 1.15  # ZL Hack: shrinkage
                     size[1] /= 1.3  # ZL Hack: shrinkage
                     size[1] /= 1.7  # ZL Hack: shrinkage
-                
-                
+
             if self.real_weight_porpotion_boxes:
-                g_attr["density"] = str((hull_params['volume'] / (size[0] * size[1] * size[2] * 8).item()) * base_density)
-            
+                g_attr["density"] = str(
+                    (hull_params["volume"] / (size[0] * size[1] * size[2] * 8).item()) * base_density
+                )
+
             g_attr["pos"] = "{0:.4f} {1:.4f} {2:.4f}".format(*pos)
             g_attr["size"] = "{0:.4f} {1:.4f} {2:.4f}".format(*size)
             g_attr["quat"] = "{0:.4f} {1:.4f} {2:.4f} {3:.4f}".format(*rot)
@@ -667,7 +694,7 @@ class Skeleton:
 
         elif g_attr["type"] == "sphere":
             pos = np.zeros(3)
-            radius = np.cbrt(hull_params['volume'] * 3 / (4 * np.pi))
+            radius = np.cbrt(hull_params["volume"] * 3 / (4 * np.pi))
             if bone.name in ["Pelvis"]:
                 radius *= 0.6  # ZL Hack: shrinkage
                 if self.real_weight_porpotion_capsules:
@@ -676,7 +703,7 @@ class Skeleton:
             g_attr["size"] = "{0:.4f}".format(radius)
             # g_attr["size"] = "{0:.4f}".format(*template_attributes["size"])
             g_attr["pos"] = "{0:.4f} {1:.4f} {2:.4f}".format(*pos)
-        g_attr['name'] = bone.name
+        g_attr["name"] = bone.name
         SubElement(node, "geom", g_attr)
 
         # write child bones
