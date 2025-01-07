@@ -412,6 +412,8 @@ class Skeleton:
                 attr["joint"] = name
                 if self.sim in ["mujoco"]:
                     attr["gear"] = str(GAINS_MJ[name[:-2]][2])
+                    # phj HACK
+                    attr["gear"] = str(GAINS_MJ[name[:-2]][3])
                 elif self.sim in ["isaacgym"]:
                     attr["gear"] = "500"
                 SubElement(actuators, "motor", attr)
