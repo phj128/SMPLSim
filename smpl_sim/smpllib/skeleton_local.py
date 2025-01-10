@@ -161,6 +161,11 @@ GAINS_PHC = {
     "R_Thumb3": [100, 10, 1, 150],
 }
 
+GAINS_SLIDE = {
+    "L_Wrist": [300, 30, 1, 150],
+    "R_Wrist": [300, 30, 1, 150],
+}
+
 ### UHC Phd
 # GAINS = {
 #     "L_Hip":        [500, 50, 1, 500, 10, 2],
@@ -383,8 +388,9 @@ class Skeleton:
         if self.sim in ["mujoco"]:
             default = tree.getroot().find("default")
             motor_default = SubElement(default, "motor")
-            motor_default.set("ctrllimited", "true")
-            motor_default.set("ctrlrange", "-1 1")
+            # motor_default.set("ctrllimited", "true")
+            # motor_default.set("ctrlrange", "-1 1")
+            motor_default.set("ctrllimited", "false")
 
         worldbody = tree.getroot().find("worldbody")
         self.size_buffer = {}
@@ -412,8 +418,8 @@ class Skeleton:
                 attr["joint"] = name
                 if self.sim in ["mujoco"]:
                     attr["gear"] = str(GAINS_MJ[name[:-2]][2])
-                    # phj HACK
-                    attr["gear"] = str(GAINS_MJ[name[:-2]][3])
+                    # attr["ctrlrange"] = "-500 500"
+                    # attr["ctrlrange"] = "-1 1"
                 elif self.sim in ["isaacgym"]:
                     attr["gear"] = "500"
                 SubElement(actuators, "motor", attr)
@@ -469,18 +475,90 @@ class Skeleton:
         return etree.tostring(tree, pretty_print=False)
 
     def write_xml_bodynode(self, bone, parent_node, offset, ref_angles):
+        if bone.parent is None and self.smpl_model == "mano":
+            attr = dict()
+            attr["name"] = "fixed_base"
+            # attr["pos"] = "{0:.4f} {1:.4f} {2:.4f}".format(*(bone.pos + offset))
+            attr["pos"] = "0 0 0"
+            node = SubElement(parent_node, "body", attr)
+            parent_node = node
+
+            j_attr = dict()
+            j_attr["name"] = bone.name
+            SubElement(node, "freejoint", j_attr)
+            # add x y z slider body and joint
+            dof_indexes = ["dx", "dy", "dz"]
+            dof_axises = np.eye(3)
+            for dof_index, dof_axis in zip(dof_indexes, dof_axises):
+                attr = dict()
+                attr["name"] = bone.name + "_" + dof_index
+                attr["pos"] = "0 0 0"
+                node = SubElement(parent_node, "body", attr)
+
+                j_attr = dict()
+                j_attr["name"] = bone.name + "_" + dof_index
+                j_attr["type"] = "slide"
+                j_attr["axis"] = "{0:.4f} {1:.4f} {2:.4f}".format(*dof_axis)
+
+                j_attr["stiffness"] = str(GAINS_SLIDE[bone.name][0])
+                j_attr["damping"] = str(GAINS_SLIDE[bone.name][1])
+                j_attr["armature"] = "0.02"
+                if dof_index == "dz":
+                    j_attr["range"] = "-1 1"
+                else:
+                    j_attr["range"] = "-1 1"
+                SubElement(node, "joint", j_attr)
+                parent_node = node
+
         attr = dict()
         attr["name"] = bone.name
-        attr["pos"] = "{0:.4f} {1:.4f} {2:.4f}".format(*(bone.pos + offset))
+
+        if bone.name in [
+            "R_ThumbTip",
+            "R_IndexTip",
+            "R_MiddleTip",
+            "R_RingTip",
+            "R_PinkyTip",
+            "L_ThumbTip",
+            "L_IndexTip",
+            "L_MiddleTip",
+            "L_RingTip",
+            "L_PinkyTip",
+        ]:
+            # fake body for fingertips, no child, so just return
+            attr["pos"] = "0 0 0"
+            node = SubElement(parent_node, "body", attr)
+            return
+
+        if bone.parent is None and self.smpl_model == "mano":
+            attr["pos"] = "0 0 0"
+        else:
+            attr["pos"] = "{0:.4f} {1:.4f} {2:.4f}".format(*(bone.pos + offset))
         node = SubElement(parent_node, "body", attr)
 
         # SubElement(node, "site", {"name": bone.name, "size": "0.01"}) # Writing site
 
         # write joints
         if bone.parent is None:
-            j_attr = dict()
-            j_attr["name"] = bone.name
-            SubElement(node, "freejoint", j_attr)
+            if self.smpl_model == "mano":
+                dof_indexes = ["x", "y", "z"]
+                for dof_index, dof_axis in zip(dof_indexes, dof_axises):
+                    j_attr = dict()
+                    j_attr["name"] = bone.name + "_" + dof_index
+                    j_attr["type"] = "hinge"
+                    j_attr["pos"] = "0 0 0"
+                    j_attr["axis"] = "{0:.4f} {1:.4f} {2:.4f}".format(*dof_axis)
+
+                    j_attr["stiffness"] = str(GAINS_PHC[bone.name][0])
+                    j_attr["damping"] = str(GAINS_PHC[bone.name][1])
+                    j_attr["armature"] = "0.02"
+
+                    j_attr["range"] = "-180.0 180.0"
+                    SubElement(node, "joint", j_attr)
+            else:
+                j_attr = dict()
+                j_attr["name"] = bone.name
+                SubElement(node, "freejoint", j_attr)
         else:
             if self.ball_joints:
                 j_attr = dict()
@@ -537,6 +615,10 @@ class Skeleton:
             GEOM_TYPES["L_Wrist"] = "box"
             GEOM_TYPES["R_Wrist"] = "box"
 
+        if self.smpl_model == "mano":
+            GEOM_TYPES["L_Wrist"] = "box"
+            GEOM_TYPES["R_Wrist"] = "box"
+
         g_attr["type"] = GEOM_TYPES[bone.name]
         g_attr["contype"] = "1"
         g_attr["conaffinity"] = "1"
@@ -549,6 +631,39 @@ class Skeleton:
         e2 = bone.end.copy() + offset
         if bone.name in ["Torso", "Chest", "Spine"]:
             seperation = 0.45
+        elif bone.name in [
+            "R_Thumb1",
+            "L_Thumb1",
+            "R_Thumb2",
+            "L_Thumb2",
+            "R_Thumb3",
+            "L_Thumb3",
+            "R_Index1",
+            "L_Index1",
+            "R_Index2",
+            "L_Index2",
+            "R_Index3",
+            "L_Index3",
+            "R_Middle1",
+            "L_Middle1",
+            "R_Middle2",
+            "L_Middle2",
+            "R_Middle3",
+            "L_Middle3",
+            "R_Ring1",
+            "L_Ring1",
+            "R_Ring2",
+            "L_Ring2",
+            "R_Ring3",
+            "L_Ring3",
+            "R_Pinky1",
+            "L_Pinky1",
+            "R_Pinky2",
+            "L_Pinky2",
+            "R_Pinky3",
+            "L_Pinky3",
+        ]:
+            seperation = 0.2
         else:
             seperation = 0.2
 
@@ -674,7 +789,9 @@ class Skeleton:
                 else:
                     size[0] /= 1.5  # ZL Hack: shrinkage
                     size[2] /= 1.5  # ZL Hack: shrinkage
-            if self.smpl_model == "smplx" and (bone.name == "L_Wrist" or bone.name == "R_Wrist"):
+            if (self.smpl_model == "smplx" or self.smpl_model == "mano") and (
+                bone.name == "L_Wrist" or bone.name == "R_Wrist"
+            ):
                 if self.upright_start:
                     size[0] /= 1.15  # ZL Hack: shrinkage
                     size[1] /= 1.3  # ZL Hack: shrinkage
@@ -706,6 +823,7 @@ class Skeleton:
             # g_attr["size"] = "{0:.4f}".format(*template_attributes["size"])
             g_attr["pos"] = "{0:.4f} {1:.4f} {2:.4f}".format(*pos)
         g_attr["name"] = bone.name
+
         SubElement(node, "geom", g_attr)
 
         # write child bones
