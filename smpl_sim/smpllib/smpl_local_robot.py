@@ -1158,6 +1158,8 @@ class SMPL_Robot:
         self.create_vel_sensors = cfg.get("create_vel_sensors", False)
         self.sim = cfg.get("sim", "mujoco")
 
+        self.with_fingertip = cfg.get("with_fingertip", False)
+
         os.makedirs("/tmp/smpl/", exist_ok=True)
         self.param_specs = self.cfg.get("body_params", {})
         self.hull_dict = {}
@@ -1179,6 +1181,7 @@ class SMPL_Robot:
         elif self.smpl_model == "smplx":
 
             self.smpl_parser_n = SMPLX_Parser(
+                with_fingertip=self.with_fingertip,
                 model_path=data_dir,
                 gender="neutral",
                 use_pca=False,
@@ -1188,6 +1191,7 @@ class SMPL_Robot:
             )
 
             self.smpl_parser_m = SMPLX_Parser(
+                with_fingertip=self.with_fingertip,
                 model_path=data_dir,
                 gender="male",
                 use_pca=False,
@@ -1196,6 +1200,7 @@ class SMPL_Robot:
                 num_betas=20,
             )
             self.smpl_parser_f = SMPLX_Parser(
+                with_fingertip=self.with_fingertip,
                 model_path=data_dir,
                 gender="female",
                 use_pca=False,
@@ -1207,6 +1212,7 @@ class SMPL_Robot:
             # flat_hand_mean=True, which is T-pose
             # init will call load_from_skeleton, needs neutral, but same as male=left hand
             self.smpl_parser_n = MANO_Parser(
+                with_fingertip=self.with_fingertip,
                 model_path=data_dir,
                 use_pca=False,
                 flat_hand_mean=True,
@@ -1214,6 +1220,7 @@ class SMPL_Robot:
             )
             # male is left hand
             self.smpl_parser_m = MANO_Parser(
+                with_fingertip=self.with_fingertip,
                 model_path=data_dir,
                 use_pca=False,
                 flat_hand_mean=True,
@@ -1221,6 +1228,7 @@ class SMPL_Robot:
             )
             # female is right hand
             self.smpl_parser_f = MANO_Parser(
+                with_fingertip=self.with_fingertip,
                 model_path=data_dir,
                 use_pca=False,
                 flat_hand_mean=True,

@@ -430,10 +430,26 @@ class SMPLH_Parser(_SMPLH):
 
 class SMPLX_Parser(_SMPLX):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, with_fingertip=False, *args, **kwargs):
         super(SMPLX_Parser, self).__init__(*args, **kwargs)
+        self.with_fingertip = with_fingertip
         self.device = next(self.parameters()).device
-        self.joint_names = SMPLH_BONE_ORDER_NAMES
+        self.joint_names = SMPLH_BONE_ORDER_NAMES.copy()
+        if self.with_fingertip:
+            self.joint_names.extend(
+                [
+                    "L_ThumbTip",
+                    "L_IndexTip",
+                    "L_MiddleTip",
+                    "L_RingTip",
+                    "L_PinkyTip",
+                    "R_ThumbTip",
+                    "R_IndexTip",
+                    "R_MiddleTip",
+                    "R_RingTip",
+                    "R_PinkyTip",
+                ]
+            )
         self.joint_axes = {x: np.identity(3) for x in self.joint_names}
         self.joint_dofs = {x: ["x", "y", "z"] for x in self.joint_names}
         self.joint_range = {x: np.hstack([np.ones([3, 1]) * -np.pi, np.ones([3, 1]) * np.pi]) for x in self.joint_names}
@@ -482,7 +498,18 @@ class SMPLX_Parser(_SMPLX):
             self.v_template = v_template
 
         with torch.no_grad():
-            joint_names = SMPLX_BONE_ORDER_NAMES
+            joint_names = SMPLX_BONE_ORDER_NAMES.copy()
+            if self.with_fingertip:
+                joint_names[joint_names.index("L_thumb")] = "L_ThumbTip"
+                joint_names[joint_names.index("L_index")] = "L_IndexTip"
+                joint_names[joint_names.index("L_middle")] = "L_MiddleTip"
+                joint_names[joint_names.index("L_ring")] = "L_RingTip"
+                joint_names[joint_names.index("L_Pinky")] = "L_PinkyTip"
+                joint_names[joint_names.index("R_thumb")] = "R_ThumbTip"
+                joint_names[joint_names.index("R_index")] = "R_IndexTip"
+                joint_names[joint_names.index("R_middle")] = "R_MiddleTip"
+                joint_names[joint_names.index("R_ring")] = "R_RingTip"
+                joint_names[joint_names.index("R_Pinky")] = "R_PinkyTip"
             if zero_pose is None:
                 verts, Jtr = self.get_joints_verts(self.zero_pose, th_betas=betas)
             else:
@@ -491,7 +518,15 @@ class SMPLX_Parser(_SMPLX):
             jts_np = Jtr.detach().cpu().numpy()
 
             smpl_joint_parents = self.parents.cpu().numpy()
-            joint_pick_idx = [SMPLX_BONE_ORDER_NAMES.index(i) for i in SMPLH_BONE_ORDER_NAMES]
+            if self.with_fingertip:
+                smpl_joint_parents = np.concatenate(
+                    [smpl_joint_parents, np.array([-1 for _ in range(11)])]
+                )  # nose, eye and other not used, just set -1
+                # fingertip
+                smpl_joint_parents = np.concatenate(
+                    [smpl_joint_parents, np.array([39, 27, 30, 36, 33, 54, 42, 45, 51, 48])]
+                )
+            joint_pick_idx = [joint_names.index(i) for i in self.joint_names]
             joint_pos = Jtr[0].numpy()
             joint_offsets = {
                 joint_names[c]: (joint_pos[c] - joint_pos[p]) if c > 0 else joint_pos[c]
@@ -610,7 +645,7 @@ class SMPLX_Parser(_SMPLX):
 
 class MANO_Parser(_MANO):
 
-    def __init__(self, create_transl=False, *args, **kwargs):
+    def __init__(self, with_fingertip=False, create_transl=False, *args, **kwargs):
         """SMPL model constructor
         Parameters
         ----------
@@ -666,11 +701,12 @@ class MANO_Parser(_MANO):
             self.joint_names = MANO_RIGHT_BONE_ORDER_NAMES.copy()
         else:
             self.joint_names = MANO_LEFT_BONE_ORDER_NAMES.copy()
-        # add fingertips
-        if self.is_rhand:
-            self.joint_names.extend(["R_ThumbTip", "R_IndexTip", "R_MiddleTip", "R_RingTip", "R_PinkyTip"])
-        else:
-            self.joint_names.extend(["L_ThumbTip", "L_IndexTip", "L_MiddleTip", "L_RingTip", "L_PinkyTip"])
+        if self.with_fingertip:
+            # add fingertips
+            if self.is_rhand:
+                self.joint_names.extend(["R_ThumbTip", "R_IndexTip", "R_MiddleTip", "R_RingTip", "R_PinkyTip"])
+            else:
+                self.joint_names.extend(["L_ThumbTip", "L_IndexTip", "L_MiddleTip", "L_RingTip", "L_PinkyTip"])
         self.joint_axes = {x: np.identity(3) for x in self.joint_names}
         self.joint_dofs = {x: ["x", "y", "z"] for x in self.joint_names}
         self.joint_range = {x: np.hstack([np.ones([3, 1]) * -np.pi, np.ones([3, 1]) * np.pi]) for x in self.joint_names}
@@ -708,8 +744,9 @@ class MANO_Parser(_MANO):
         vertices = smpl_output.vertices
         joints = smpl_output.joints
         # add fingertips
-        fingertips = vertices[:, self.vertex_joint_selector.extra_joints_idxs]
-        joints = torch.cat([joints, fingertips], dim=1)
+        if self.with_fingertip:
+            fingertips = vertices[:, self.vertex_joint_selector.extra_joints_idxs]
+            joints = torch.cat([joints, fingertips], dim=1)
         # joints = smpl_output.joints[:,JOINST_TO_USE]
         return vertices, joints
 
@@ -722,15 +759,16 @@ class MANO_Parser(_MANO):
             verts_np = verts.detach().cpu().numpy()
             jts_np = Jtr.detach().cpu().numpy()
             parents = self.parents.cpu().numpy()
-            parents = np.concatenate([parents, np.array([15, 3, 6, 12, 9])])
-            # ** original MANO joint order (right hand)
-            #                16-15-14-13-\  thumb
-            #                             \
-            #          17 --3 --2 --1------0  index
-            #        18 --6 --5 --4-------/  middle
-            #        19 -12 -11 --10-----/  ring
-            #          20 --9 --8 --7---/  pinky
-            # **
+            if self.with_fingertip:
+                parents = np.concatenate([parents, np.array([15, 3, 6, 12, 9])])
+                # ** original MANO joint order (right hand)
+                #                16-15-14-13-\  thumb
+                #                             \
+                #          17 --3 --2 --1------0  index
+                #        18 --6 --5 --4-------/  middle
+                #        19 -12 -11 --10-----/  ring
+                #          20 --9 --8 --7---/  pinky
+                # **
             offsets_smpl = [np.array([0, 0, 0])]
             for i in range(1, len(parents)):
                 p_id = parents[i]
