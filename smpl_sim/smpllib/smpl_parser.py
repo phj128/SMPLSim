@@ -695,6 +695,7 @@ class MANO_Parser(_MANO):
             will be selected
         """
         super(MANO_Parser, self).__init__(*args, **kwargs)
+        self.with_fingertip = with_fingertip
         self.device = next(self.parameters()).device
 
         if kwargs["is_rhand"]:

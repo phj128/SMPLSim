@@ -527,8 +527,8 @@ class Skeleton:
             "L_RingTip",
             "L_PinkyTip",
         ]:
-            # fake body for fingertips, no child, so just return
-            attr["pos"] = "0 0 0"
+            # 使用bone.end来设置指尖位置
+            attr["pos"] = "{0:.4f} {1:.4f} {2:.4f}".format(*(bone.end + offset))
             node = SubElement(parent_node, "body", attr)
             return
 
